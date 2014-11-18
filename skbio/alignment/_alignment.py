@@ -16,6 +16,9 @@ from collections import Counter, defaultdict, OrderedDict
 
 import numpy as np
 from scipy.stats import entropy
+from matplotlib import pyplot as plt
+from matplotlib import cm
+from collections import defaultdict
 
 from skbio._base import SkbioObject
 from skbio.stats.distance import DistanceMatrix
@@ -1677,6 +1680,71 @@ class Alignment(SequenceCollection):
                 return False
         return True
 
+    def plot(self, value_map, legend_labels=['Low', 'Medium', 'High'],
+                       fig_size=(15,10), cmap='YlGn', sequence_order=None):
+        """Plot the alignment as a heatmap
+
+        Parameters
+        ----------
+        value_map : dict, collections.defaultdict
+            Dictionary mapping characters in the alignment to values. KeyErrors
+            are not caught, so all possible values should be in this dict, or
+            it should be a collections.defaultdict with can, for example,
+            default to ``nan``.
+        legend_labels : iterable, optional
+            Labels for the min, median, and max values in the legend.
+        fig_size : tuple, optional
+            Size of figure in inches.
+        cmap : matplotlib colormap, optional
+            See here for choices:
+            http://wiki.scipy.org/Cookbook/Matplotlib/Show_colormaps
+        sequence_order : iterable
+            The order, from top-to-bottom, that the sequences should be
+            plotted in.
+
+        Raises
+        ------
+        KeyError
+            If a character in self is not in ``value_map``, and ``value_map``
+            is not a  ``collections.defaultdict``.
+
+        """
+        # cache the sequence length, count, and ids, to avoid multiple look-ups
+        sequence_length = self.sequence_length()
+        sequence_count = self.sequence_count()
+        sequence_ids = self.ids()
+        sequence_order = sequence_order or sequence_ids
+        values = list(value_map.values())
+
+        # create an empty data matrix
+        mtx = np.zeros((sequence_length, sequence_count))
+        # fill the data matrix by iterating over the alignment and mapping
+        # characters to values
+        for i in range(sequence_length):
+            for j, sequence_id in enumerate(sequence_order):
+                aa = str(self[sequence_id][i])
+                mtx[i][j] = value_map[aa]
+
+        # build the heatmap, this code derived from the Matplotlib Gallery
+        # http://matplotlib.org/examples/pylab_examples/...
+        #colorbar_tick_labelling_demo.html
+        fig, ax = plt.subplots()
+        fig.set_size_inches(fig_size)
+
+        cax = ax.imshow(mtx.T, interpolation='nearest', cmap=cm.YlGn)
+
+        # Add colorbar and define tick labels
+        cbar = fig.colorbar(cax,
+                            ticks=[min(values),
+                                   np.median(values),
+                                   max(values)],
+                            orientation='horizontal')
+        ax.set_yticks([0] + list(range(3, sequence_count - 3, 3)) +
+                      [sequence_count-1])
+        ax.set_yticklabels(sequence_order)
+        ax.set_xticks(range(sequence_length))
+        ax.set_xticklabels(self.majority_consensus(),size=7)
+        cbar.ax.set_xticklabels(legend_labels)# horizontal colorbar
 
 class StockholmAlignment(Alignment):
     """Contains the metadata information in a Stockholm file alignment
