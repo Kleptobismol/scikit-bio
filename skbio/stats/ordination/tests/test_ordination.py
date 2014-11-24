@@ -672,6 +672,32 @@ class TestOrdinationResults(unittest.TestCase):
         assert_ordination_results_equal(deserialized, self.ordination_results)
         self.assertTrue(type(deserialized) == OrdinationResults)
 
+    def test_str(self):
+        exp = ("Ordination results:\n"
+               "\tEigvals: 2\n"
+               "\tProportion explained: N/A\n"
+               "\tSpecies: 3x2\n"
+               "\tSite: 3x2\n"
+               "\tBiplot: N/A\n"
+               "\tSite constraints: N/A\n"
+               "\tSpecies IDs: 'Species1', 'Species2', 'Species3'\n"
+               "\tSite IDs: 'Site1', 'Site2', 'Site3'")
+        obs = str(self.ordination_results)
+        self.assertEqual(obs, exp)
+
+        # all optional attributes missing
+        exp = ("Ordination results:\n"
+               "\tEigvals: 1\n"
+               "\tProportion explained: N/A\n"
+               "\tSpecies: N/A\n"
+               "\tSite: N/A\n"
+               "\tBiplot: N/A\n"
+               "\tSite constraints: N/A\n"
+               "\tSpecies IDs: N/A\n"
+               "\tSite IDs: N/A")
+        obs = str(OrdinationResults(np.array([4.2])))
+        self.assertEqual(obs, exp)
+
     def check_basic_figure_sanity(self, fig, exp_num_subplots, exp_title,
                                   exp_legend_exists, exp_xlabel, exp_ylabel,
                                   exp_zlabel):
@@ -853,7 +879,9 @@ class TestOrdinationResults(unittest.TestCase):
 
     def test_repr_svg(self):
         obs = self.min_ord_results._repr_svg_()
-        assert_is_instance(obs, text_type)
+        # print_figure(format='svg') can return text or bytes depending on the
+        # version of IPython
+        assert_true(isinstance(obs, text_type) or isinstance(obs, binary_type))
         assert_true(len(obs) > 0)
 
     def test_png(self):

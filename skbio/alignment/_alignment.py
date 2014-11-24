@@ -12,14 +12,13 @@ from future.utils import viewkeys, viewitems
 from six import StringIO
 
 import warnings
-from collections import Counter, defaultdict, OrderedDict
+from collections import Counter, OrderedDict
 
 import numpy as np
 from scipy.stats import entropy
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from collections import defaultdict
-
 from skbio._base import SkbioObject
 from skbio.stats.distance import DistanceMatrix
 from skbio.io.util import open_file
@@ -403,7 +402,7 @@ class SequenceCollection(SkbioObject):
         >>> print(a1.distances(hamming))
         3x3 distance matrix
         IDs:
-        s1, s2, s3
+        's1', 's2', 's3'
         Data:
         [[ 0.     0.25   0.25 ]
          [ 0.25   0.     0.125]
@@ -1046,7 +1045,7 @@ class Alignment(SequenceCollection):
         >>> print(a1.distances())
         3x3 distance matrix
         IDs:
-        s1, s2, s3
+        's1', 's2', 's3'
         Data:
         [[ 0.          0.42857143  0.28571429]
          [ 0.42857143  0.          0.42857143]
@@ -1680,8 +1679,8 @@ class Alignment(SequenceCollection):
                 return False
         return True
 
-    def plot(self, value_map, legend_labels=['Low', 'Medium', 'High'],
-                       fig_size=(15,10), cmap='YlGn', sequence_order=None):
+    def heatmap(self, value_map, legend_labels=['Low', 'Medium', 'High'],
+                fig_size=(15, 10), cmap='YlGn', sequence_order=None):
         """Plot the alignment as a heatmap
 
         Parameters
@@ -1702,11 +1701,44 @@ class Alignment(SequenceCollection):
             The order, from top-to-bottom, that the sequences should be
             plotted in.
 
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Figure containing the heatmap and colorbar of the plotted
+            dissimilarity matrix.
+
         Raises
         ------
         KeyError
             If a character in self is not in ``value_map``, and ``value_map``
             is not a  ``collections.defaultdict``.
+
+        Examples
+        --------
+        .. heatmap::
+
+           Define an Alignment and use hydrophobicity as your value map:
+
+           >>>from skbio import Alignment, ProteinSequence, DNA
+           >>> import numpy as np
+           >>> from collections import defaultdict
+           >>> hydrophobicity_idx = defaultdict(lambda: np.nan)
+           >>> hydrophobicity_idx.update({'A': 0.61, 'L': 1.53, 'R': 0.60,
+           ...                            'K': 1.15, 'N': 0.06, 'M': 1.18,
+           ...                            'D': 0.46, 'F': 2.02, 'C': 1.07,
+           ...                            'P': 1.95, 'Q': 0., 'S': 0.05,
+           ...                            'E': 0.47, 'T': 0.05, 'G': 0.07,
+           ...                            'W': 2.65, 'H': 0.61, 'Y': 1.88,
+           ...                            'I': 2.22, 'V': 1.32})
+           >>> hydrophobicity_labels=['Hydrophilic', 'Medium', 'Hydrophobic']
+           >>> sequences = [DNA('A--CCGT', id="seq1"),
+           ...              DNA('AACCGGT', id="seq2")]
+           >>> aln = Alignment(sequences)
+
+           Plot the Alignment as a heatmap:
+
+           >>> aln.heatmap(hydrophobicity_idx,
+           ...             legend_labels=hydrophobicity_labels)
 
         """
         # cache the sequence length, count, and ids, to avoid multiple look-ups
@@ -1727,7 +1759,7 @@ class Alignment(SequenceCollection):
 
         # build the heatmap, this code derived from the Matplotlib Gallery
         # http://matplotlib.org/examples/pylab_examples/...
-        #colorbar_tick_labelling_demo.html
+        # colorbar_tick_labelling_demo.html
         fig, ax = plt.subplots()
         fig.set_size_inches(fig_size)
 
@@ -1735,16 +1767,17 @@ class Alignment(SequenceCollection):
 
         # Add colorbar and define tick labels
         cbar = fig.colorbar(cax,
-                            ticks=[min(values),
-                                   np.median(values),
-                                   max(values)],
-                            orientation='horizontal')
+                            ticks=[min(values), np.median(values),
+                                   max(values)], orientation='horizontal')
         ax.set_yticks([0] + list(range(3, sequence_count - 3, 3)) +
                       [sequence_count-1])
         ax.set_yticklabels(sequence_order)
         ax.set_xticks(range(sequence_length))
-        ax.set_xticklabels(self.majority_consensus(),size=7)
-        cbar.ax.set_xticklabels(legend_labels)# horizontal colorbar
+        ax.set_xticklabels(self.majority_consensus(), size=7)
+        cbar.ax.set_xticklabels(legend_labels)
+        # horizontal colorbar
+        return(fig)
+
 
 class StockholmAlignment(Alignment):
     """Contains the metadata information in a Stockholm file alignment
